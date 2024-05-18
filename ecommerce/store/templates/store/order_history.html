@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Order History</title>
+</head>
+<body>
+    <h1>Order History</h1>
+    <ul>
+        {% for order in orders %}
+            <li>Order ID: {{ order.id }} - Date: {{ order.date_ordered }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

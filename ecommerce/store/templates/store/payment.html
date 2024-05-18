@@ -1,0 +1,21 @@
+<!-- store/templates/store/payment.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Payment</title>
+</head>
+<body>
+    <h1>Payment for Order #{{ order.id }}</h1>
+    <p>Total Amount: ${{ order.total|floatformat:2 }}</p>
+    
+    <form method="post" action="{% url 'payment' order.id %}">
+        {% csrf_token %}
+        <label>Select Payment Method:</label><br>
+        <input type="radio" name="payment_method" value="credit_card"> Credit Card<br>
+        <input type="radio" name="payment_method" value="paypal"> PayPal<br>
+        <input type="radio" name="payment_method" value="paypal"> BTC<br>
+        <button type="submit">Make Payment</button>
+    </form>
+</body>
+</html>

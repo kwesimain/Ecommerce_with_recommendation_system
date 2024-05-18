@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Order Summary</title>
+</head>
+<body>
+    <h1>Order Summary</h1>
+    <h2>Order ID: {{ order.id }}</h2>
+    <h3>Order Date: {{ order.date_ordered }}</h3>
+    <h3>Total Price: ${{ total_price|floatformat:2 }}</h3>
+    
+    <ul>
+        {% for item in order_items %}
+            <li>
+                {{ item.product.name }} - {{ item.quantity }} x ${{ item.product.price|floatformat:2 }} = ${{ item.total_price|floatformat:2 }}
+            </li>
+        {% endfor %}
+    </ul>
+    
+    <a href="{% url 'home' %}">Continue Shopping</a>
+</body>
+</html>
