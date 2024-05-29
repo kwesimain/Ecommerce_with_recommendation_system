@@ -5,19 +5,32 @@
     <title>Order Summary</title>
 </head>
 <body>
+    {% load custom_filters %}
     <h1>Order Summary</h1>
-    <h2>Order ID: {{ order.id }}</h2>
-    <h3>Order Date: {{ order.date_ordered }}</h3>
-    <h3>Total Price: ${{ total_price|floatformat:2 }}</h3>
     
-    <ul>
-        {% for item in order_items %}
-            <li>
-                {{ item.product.name }} - {{ item.quantity }} x ${{ item.product.price|floatformat:2 }} = ${{ item.total_price|floatformat:2 }}
-            </li>
-        {% endfor %}
-    </ul>
+    <table>
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in order_items %}
+                <tr>
+                    <td>{{ item.product.name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>${{ item.product.price|floatformat:2 }}</td>
+                    <td>${{ item.product.price|multiply:item.quantity|floatformat:2 }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
     
-    <a href="{% url 'home' %}">Continue Shopping</a>
+    <h2>Total: ${{ order.total|floatformat:2 }}</h2>
+    
+    <a href="{% url 'home' %}">Back to Home</a>
 </body>
 </html>

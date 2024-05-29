@@ -1,43 +1,45 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Cart</title>
-</head>
-<body>
-    <h1>Cart</h1>
-    
-    {% if cart_items %}
-        <form method="post">
-            {% csrf_token %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th>Quantity</th>
-                        <th>Price</th>
-                        <th>Total</th>
-                        <th>Remove</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in cart_items %}
-                        <tr>
-                            <td>{{ item.product.name }}</td>
-                            <td><input type="number" name="quantity_{{ item.id }}" value="{{ item.quantity }}" min="1"></td>
-                            <td>${{ item.product.price }}</td>
-                            <td>${{ item.total_price }}</td>
-                            <td><a href="{% url 'remove_from_cart' item.id %}">Remove</a></td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <button type="submit">Update Cart</button>
-        </form>
-        
-        <a href="{% url 'checkout' %}">Proceed to Checkout</a>
-    {% else %}
-        <p>Your cart is empty.</p>
-    {% endif %}
-</body>
-</html>
+<!-- templates/store/cart.html -->
+
+{% extends "store/base.html" %}
+
+{% block title %}Cart{% endblock %}
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'styles/cart.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Shopping Cart</h1>
+    <div class="cart-items">
+        {% if items %}
+            {% for item in items %}
+                <div class="cart-item">
+                    <div class="item-info">
+                        <h3>{{ item.product.name }}</h3>
+                        <p>${{ item.product.price }}</p>
+                    </div>
+                    <div class="item-quantity">
+                        <form action="{% url 'update_cart' item.id %}" method="post">
+                            {% csrf_token %}
+                            <input type="number" name="quantity" value="{{ item.quantity }}" min="1">
+                            <button type="submit" class="btn btn-primary">Update</button>
+                        </form>
+                    </div>
+                    <div class="item-remove">
+                        <a href="{% url 'remove_from_cart' item.id %}" class="btn btn-danger">Remove</a>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>Your cart is empty.</p>
+        {% endif %}
+    </div>
+    <div class="cart-summary">
+        <h2>Order Summary</h2>
+        <p>Total: ${{ order.get_cart_total }}</p>
+        <a href="{% url 'checkout' %}" class="btn btn-primary">Proceed to Checkout</a>
+    </div>
+</div>
+{% endblock %}

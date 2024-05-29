@@ -1,0 +1,49 @@
+<!-- templates/store/base.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Your Website Title{% endblock %}</title>
+    <!-- Include your CSS files -->
+    <link rel="stylesheet" href="{% static 'styles/reset.css' %}">
+    <link rel="stylesheet" href="{% static 'styles/base.css' %}">
+    <!-- Include any additional CSS files specific to the template -->
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav>
+        <ul>
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'product_list' %}">Products</a></li>
+            {% if user.is_authenticated %}
+                <li><a href="{% url 'cart' %}">Cart</a></li>
+                <li><a href="{% url 'order_history' %}">Order History</a></li>
+                <li><a href="{% url 'logout' %}">Logout</a></li>
+            {% else %}
+                <li><a href="{% url 'login' %}">Login</a></li>
+                <li><a href="{% url 'register' %}">Register</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    <!-- Content Area -->
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 Your Company Name. All rights reserved.</p>
+    </footer>
+
+    <!-- Include your JavaScript files -->
+    <script src="{% static 'scripts/jquery.js' %}"></script>
+    <script src="{% static 'scripts/main.js' %}"></script>
+    <!-- Include any additional JavaScript files specific to the template -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

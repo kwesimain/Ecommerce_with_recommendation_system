@@ -1,18 +1,26 @@
-# store/views.py
-
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import OrderItem, Product, Category, Order, Customer
+from .models import OrderItem, Product, Category, Order, Customer, UserInteraction, UserProfile, ShippingAddress
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from django.http import JsonResponse
+import datetime
+import json
 
 def home(request):
     products = Product.objects.all()
     categories = Category.objects.all()
-    return render(request, 'store/home.html', {'products': products, 'categories': categories})
+
+    # Get recommended products for the logged-in user
+    recommended_products = []
+    if request.user.is_authenticated:
+        user_profile = UserProfile.objects.get(user=request.user)
+        recommended_products = user_profile.recommended_products.all()
+
+    return render(request, 'store/home.html', {'products': products, 'categories': categories, 'recommended_products': recommended_products})
 
 def product_list(request):
     products = Product.objects.all()
@@ -20,6 +28,11 @@ def product_list(request):
 
 def product_detail(request, product_id):
     product = get_object_or_404(Product, id=product_id)
+
+    # Record a 'view' interaction
+    if request.user.is_authenticated:
+        UserInteraction.objects.create(user=request.user, product=product, interaction_type='view')
+
     return render(request, 'store/product_detail.html', {'product': product})
 
 def category_list(request):
@@ -31,27 +44,17 @@ def category_detail(request, category_id):
     products = Product.objects.filter(category=category)
     return render(request, 'store/category_detail.html', {'category': category, 'products': products})
 
-# store/views.py
-
 @login_required
 def cart(request):
-    # Get the current user's cart items
-    cart_items = OrderItem.objects.filter(order__customer=request.user.customer, order__complete=False)
-    
-    if request.method == 'POST':
-        # Handle form submission to update quantities
-        for item in cart_items:
-            quantity_key = 'quantity_' + str(item.id)
-            if quantity_key in request.POST:
-                new_quantity = int(request.POST[quantity_key])
-                if new_quantity > 0:
-                    item.quantity = new_quantity
-                    item.save()
-                else:
-                    # Remove item if quantity is set to 0
-                    item.delete()
-    
-    return render(request, 'store/cart.html', {'cart_items': cart_items})
+    customer = request.user.customer
+    order, created = Order.objects.get_or_create(customer=customer, complete=False)
+    items = order.orderitem_set.all()
+    context = {
+        'items': items,
+        'order': order
+    }
+    return render(request, 'store/cart.html', context)
+
 
 @login_required
 def remove_from_cart(request, item_id):
@@ -59,91 +62,108 @@ def remove_from_cart(request, item_id):
     item.delete()
     return redirect('cart')
 
-
 @login_required
-def add_to_cart(request):
+def add_to_cart(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    customer = request.user.customer
+    
+    order, created = Order.objects.get_or_create(customer=customer, complete=False)
+    
+    order_item, item_created = OrderItem.objects.get_or_create(order=order, product=product)
+    
     if request.method == 'POST':
-        product_id = request.POST.get('product_id')
-        product = Product.objects.get(pk=product_id)
-        
-        # Check if the product is already in the cart
-        order, created = Order.objects.get_or_create(customer=request.user.customer, complete=False)
-        order_item, created = OrderItem.objects.get_or_create(order=order, product=product)
-        order_item.quantity += 1
+        quantity = int(request.POST.get('quantity', 1))
+        if not item_created:
+            order_item.quantity += quantity
+        else:
+            order_item.quantity = quantity
         order_item.save()
-        
-        return redirect('cart')
 
-    return redirect('home')  # Redirect to home if method is not POST
+        # Record a 'add_to_cart' interaction
+        UserInteraction.objects.create(user=request.user, product=product, interaction_type='add_to_cart')
+    
+    return redirect('cart')
+
+
+def update_cart(request, item_id):
+    item = get_object_or_404(OrderItem, id=item_id)
+    quantity = request.POST.get('quantity')
+    if quantity:
+        item.quantity = int(quantity)
+        item.save()
+    return redirect('cart')
 
 @login_required
 def checkout(request):
-    if request.method == 'POST':
-        cart_items = OrderItem.objects.filter(order__customer=request.user.customer, order__complete=False)
-        total = sum(item.product.price * item.quantity for item in cart_items)
-
-        order = Order.objects.create(customer=request.user.customer, total=total, complete=False)
-        
-        cart_items.update(order=order)
-        
-        return HttpResponseRedirect(reverse('payment', args=[order.id]))
-    else:
-        cart_items = OrderItem.objects.filter(order__customer=request.user.customer, order__complete=False)
-        total = sum(item.product.price * item.quantity for item in cart_items)
-        return render(request, 'store/checkout.html', {'cart_items': cart_items, 'total': total})
+    customer = request.user.customer
+    order, created = Order.objects.get_or_create(customer=customer, complete=False)
+    items = order.orderitem_set.all()
+    context = {
+        'items': items,
+        'order': order
+    }
+    return render(request, 'store/checkout.html', context)
 
 
 @login_required
 def order_summary(request, order_id):
-    order = get_object_or_404(Order, id=order_id, customer__user=request.user)
+    order = get_object_or_404(Order, id=order_id, customer=request.user.customer, complete=True)
+    order_items = order.orderitem_set.all()
 
-    # Retrieve order items for the specific order
-    order_items = OrderItem.objects.filter(order=order)
-
-    # Calculate total price for each order item
-    for order_item in order_items:
-        order_item.total_price = order_item.product.price * order_item.quantity
-
-    # Calculate total price of the order
-    total_price = sum(order_item.total_price for order_item in order_items)
-
-    context = {
-        'order_items': order_items,
-        'total_price': total_price,
-        'order': order
-    }
-
-    # Render the order summary page
-    return render(request, 'store/order_summary.html', context)
-
+    return render(request, 'store/order_summary.html', {'order': order, 'order_items': order_items})
 
 @login_required
 def payment(request, order_id):
-    order = get_object_or_404(Order, id=order_id, customer__user=request.user)
+    order = get_object_or_404(Order, id=order_id, customer=request.user.customer, complete=True)
+    
     if request.method == 'POST':
-        # Process the payment here, or redirect to a payment gateway
-        return HttpResponseRedirect(reverse('confirm_payment', args=[order.id]))
+        payment_method = request.POST.get('payment_method')
+        
+        if payment_method:
+            return redirect('order_summary', order_id=order.id)
     
     return render(request, 'store/payment.html', {'order': order})
-
 
 @login_required
 def confirm_payment(request, order_id):
     order = get_object_or_404(Order, id=order_id, customer__user=request.user)
     
-    # Simulate payment processing here
-    # For example, integrate with a payment gateway API
-    
-    # Mark the order as complete
     order.complete = True
     order.save()
     
-    # Update related order items to mark them as part of a completed order
     OrderItem.objects.filter(order=order).update(order=order)
 
     return HttpResponseRedirect(reverse('order_summary', args=[order.id]))
 
 
+@login_required
+#@csrf_exempt
+def process_order(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            customer = request.user.customer
+            order, created = Order.objects.get_or_create(customer=customer, complete=False)
+            ShippingAddress.objects.create(
+                customer=customer,
+                order=order,
+                address=data['address'],
+                city=data['city'],
+                state=data['region'],
+                zipcode=data['gps']
+            )
+            order.complete = True
+            order.save()
+            return JsonResponse({'success': True})
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except KeyError:
+            return JsonResponse({'error': 'Missing fields'}, status=400)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+def order_success(request):
+    return render(request, 'store/order_success.html')
 
 @login_required
 def order_history(request):
@@ -173,11 +193,9 @@ def user_register(request):
             user = form.save()
             login(request, user)
             
-            # Create a Customer object only if it doesn't exist
             Customer.objects.get_or_create(user=user)
             
             return redirect('home')
     else:
         form = UserCreationForm()
     return render(request, 'store/register.html', {'form': form})
-
