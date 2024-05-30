@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 import datetime
 import json
 
@@ -136,8 +137,8 @@ def confirm_payment(request, order_id):
     return HttpResponseRedirect(reverse('order_summary', args=[order.id]))
 
 
-@login_required
-#@csrf_exempt
+#@login_required
+@csrf_exempt
 def process_order(request):
     if request.method == 'POST':
         try:
@@ -149,18 +150,17 @@ def process_order(request):
                 order=order,
                 address=data['address'],
                 city=data['city'],
-                state=data['region'],
-                zipcode=data['gps']
+                region=data['region'],
+                gps=data['gps']
             )
             order.complete = True
             order.save()
             return JsonResponse({'success': True})
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        except KeyError:
-            return JsonResponse({'error': 'Missing fields'}, status=400)
+        except json.JSONDecodeError as e:
+            return JsonResponse({'error': f'Invalid JSON: {str(e)}'}, status=400)
+        except KeyError as e:
+            return JsonResponse({'error': f'Missing field: {str(e)}'}, status=400)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
-
 
 def order_success(request):
     return render(request, 'store/order_success.html')
