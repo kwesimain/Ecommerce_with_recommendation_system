@@ -1,0 +1,37 @@
+/* styles/order_history.css */
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.order-history {
+    border: 1px solid #ddd;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.order {
+    margin-bottom: 20px;
+}
+
+.order h2 {
+    margin: 0;
+    font-size: 1.5em;
+}
+
+.order-items ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.order-items li {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #ddd;
+}
+
+.order-items li:last-child {
+    border-bottom: none;
+}

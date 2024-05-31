@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from store.models import Product, UserInteraction
+from store.models import Product, UserInteraction, UserProfile
 from scipy.sparse import coo_matrix
 from implicit.als import AlternatingLeastSquares
 

@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import OrderItem, Product, Category, Order, Customer, UserInteraction, UserProfile, ShippingAddress
 from django.contrib.auth.decorators import login_required
@@ -167,8 +168,10 @@ def order_success(request):
 
 @login_required
 def order_history(request):
-    orders = Order.objects.filter(customer=request.user.customer)
-    return render(request, 'store/order_history.html', {'orders': orders})
+    customer = request.user.customer
+    orders = Order.objects.filter(customer=customer, complete=True)
+    context = {'orders': orders}
+    return render(request, 'store/order_history.html', context)
 
 def user_login(request):
     if request.method == 'POST':
@@ -191,11 +194,8 @@ def user_register(request):
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)
-            
-            Customer.objects.get_or_create(user=user)
-            
-            return redirect('home')
+            messages.success(request, 'Registration successful. Please log in.')
+            return redirect('login')
     else:
         form = UserCreationForm()
     return render(request, 'store/register.html', {'form': form})

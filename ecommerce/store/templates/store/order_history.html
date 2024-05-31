@@ -1,15 +1,38 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Order History</title>
-</head>
-<body>
+{% extends "store/base.html" %}
+
+{% block title %}Order History{% endblock %}
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'styles/order_history.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
     <h1>Order History</h1>
-    <ul>
-        {% for order in orders %}
-            <li>Order ID: {{ order.id }} - Date: {{ order.date_ordered }}</li>
-        {% endfor %}
-    </ul>
-</body>
-</html>
+    {% if orders %}
+        <div class="order-history">
+            {% for order in orders %}
+            <div class="order">
+                <h2>Order #{{ order.id }}</h2>
+                <p>Date Ordered: {{ order.date_ordered }}</p>
+                <p>Total: GHS{{ order.get_cart_total }}</p>
+                <div class="order-items">
+                    <h3>Items:</h3>
+                    <ul>
+                        {% for item in order.orderitem_set.all %}
+                        <li>
+                            <span>{{ item.product.name }} (x{{ item.quantity }})</span>
+                            <span>GHS{{ item.get_total }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>You have no orders yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
